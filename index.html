@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Space Shooter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Broken Blocks: <span id="broken-count">0</span></div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="ghost-overlay" class="hidden">
+            <img src="assets/images/bhoot.png" alt="Ghost">
+        </div>
+        <div id="game-controls">
+            <button id="startButton">Start Game</button>
+            <button id="pauseButton">Pause</button>
+        </div>
+        <input type="text" id="typing-input" placeholder="Type words here...">
+    </div>
+
+    <!-- The recording indicator is the only camera-related UI element -->
+    <div id="recording-indicator" class="hidden"></div>
+
+    <script src="js/words.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/camera.js"></script>
+</body>
+</html>

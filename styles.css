@@ -1,0 +1,123 @@
+/* General Body Styles */
+html, body {
+    height: 100%;
+    margin: 0;
+    /* Prevents the whole page from scrolling, letting the container handle it */
+    overflow: hidden; 
+}
+
+body {
+    background-color: #1a1a1a;
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px; /* Reduced padding */
+    box-sizing: border-box;
+}
+
+/* Game Container - FLEXBOX MAGIC! */
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px; /* Narrower for better mobile view */
+    /* Use dynamic viewport height, which adjusts for browser UI like address bars */
+    height: 100dvh; 
+    max-height: 800px;
+    border: 2px solid #444;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column; /* Key for vertical layout */
+}
+
+/* HUD - Stays at the top */
+#ui-hud {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px; /* Slightly smaller */
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10;
+    flex-shrink: 0; /* Prevents HUD from shrinking */
+}
+
+/* Canvas - Fills ALL remaining space and shrinks when keyboard appears */
+canvas {
+    display: block;
+    background-color: #000;
+    width: 100%;
+    flex-grow: 1; /* This is the most important property */
+    min-height: 0; /* Allows the canvas to shrink below its initial size */
+}
+
+/* Game Controls (Start/Pause Buttons) */
+#game-controls {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0; /* Reduced padding */
+    flex-shrink: 0;
+}
+
+/* Typing Input */
+#typing-input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #fff;
+    text-align: center;
+    box-sizing: border-box;
+    margin: 0 10px 10px 10px;
+    flex-shrink: 0;
+}
+
+button {
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    margin: 0 5px;
+}
+
+/* Ghost Overlay */
+#ghost-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+    z-index: 20;
+}
+
+#ghost-overlay img { max-width: 50%; }
+.hidden { display: none !important; }
+
+/* Recording Indicator */
+#recording-indicator {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: 20px;
+    height: 20px;
+    background-color: red;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+    z-index: 100;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+}
