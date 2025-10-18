@@ -180,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameOver() {
         isGameOver = true;
         
-        // --- CAMERA FIX: STOP RECORDING ON GAME OVER ---
         if (window.stopRecording) {
             window.stopRecording();
         }
@@ -223,6 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     quitButton.addEventListener('click', () => {
         isGameOver = true;
+
+        // --- CAMERA FIX: STOP RECORDING ON QUIT/MAIN MENU ---
+        if (window.stopRecording) {
+            window.stopRecording();
+        }
+
         if (settings.music) bgMusic.pause();
         saveHighScore();
         showScreen(homeScreen);
