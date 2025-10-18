@@ -137,11 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function startCountdown() {
         showScreen(gameContainer);
         resizeCanvas();
-        // --- KEYBOARD FIX LOGIC ---
-        isCountingDown = true;      // 1. Set the countdown state
-        inputEl.disabled = false;   // 2. Make sure input is enabled, not readOnly
-        inputEl.value = '';         // 3. Clear any previous text
-        inputEl.focus();            // 4. Focus to open the keyboard
+        isCountingDown = true;
+        inputEl.disabled = false;
+        inputEl.value = '';
+        inputEl.focus();
         
         countdownOverlay.classList.remove('hidden');
         let count = 3;
@@ -160,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function actuallyStartGame() {
-        isCountingDown = false; // Countdown is over
+        isCountingDown = false;
         isGameOver = false; isPaused = false; score = 0; brokenCount = 0;
         words = []; hasGhostAppearedThisGame = false;
         activeWordList = wordLists[settings.wordTheme] || wordLists.common;
@@ -180,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function gameOver() {
         isGameOver = true;
+        
+        // --- CAMERA FIX: STOP RECORDING ON GAME OVER ---
+        if (window.stopRecording) {
+            window.stopRecording();
+        }
+
         if (settings.sound) playAudio(gameOverSound);
         if (settings.music) bgMusic.pause();
         saveHighScore();
@@ -221,12 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settings.music) bgMusic.pause();
         saveHighScore();
         showScreen(homeScreen);
-});
+    });
 
     let previousInput = "";
     inputEl.addEventListener('input', () => {
-        // --- KEYBOARD FIX LOGIC ---
-        // Block typing during countdown by clearing the input
         if (isCountingDown) {
             inputEl.value = '';
             return;
