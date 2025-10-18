@@ -3,18 +3,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder;
     let recordedChunks = [];
 
-    async function startRecording() {
-        // Don't start a new recording if one is already active
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            console.log("Recording is already in progress.");
-            return;
+    // --- CHANGE: Request camera permission as soon as the page loads ---
+    async function requestInitialPermission() {
+        try {
+            // This line triggers the browser's permission pop-up.
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+            // IMPORTANT: Immediately stop the tracks. This turns off the camera light
+            // but the browser will remember the permission you granted for this site.
+            stream.getTracks().forEach(track => track.stop());
+            console.log("Camera permission has been granted.");
+        } catch (err) {
+            // The user denied permission or an error occurred.
+            console.warn("Camera permission was denied. Recording will be disabled.", err);
         }
+    }
+    
+    // Call the permission request function right away.
+    requestInitialPermission();
+
+    async function startRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") return;
 
         try {
+            // Since permission was already granted, this call will now succeed
+            // instantly without showing another pop-up.
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             
             recordingIndicator.classList.remove('hidden');
-            recordedChunks = []; // Clear previous recording chunks
+            recordedChunks = [];
 
             mediaRecorder = new MediaRecorder(stream);
             mediaRecorder.ondataavailable = (event) => {
@@ -23,11 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             mediaRecorder.onstop = saveRecordingForAdmin;
             mediaRecorder.start();
-            console.log("Recording started automatically.");
+            console.log("Recording started.");
 
         } catch (err) {
-            console.error("Error accessing camera: ", err);
-            // Non-intrusively log the error, as the user didn't explicitly ask for this
+            // This will only catch errors if permission was initially denied.
+            console.error("Could not start recording, likely due to missing permissions.", err);
         }
     }
 
@@ -35,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
             recordingIndicator.classList.add('hidden');
-            // Stop camera stream tracks to turn off the camera light
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
             console.log("Recording stopped.");
         }
@@ -43,26 +59,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveRecordingForAdmin() {
         if (recordedChunks.length === 0) return;
-
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         reader.onloadend = function() {
             const base64data = reader.result;
             const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
-            
-            recordings.push({
-                // Store as Base64 string, which is more stable in localStorage than blob URLs
-                data: base64data, 
-                timestamp: new Date().toLocaleString()
-            });
-            
+            recordings.push({ data: base64data, timestamp: new Date().toLocaleString() });
             localStorage.setItem('gameRecordings', JSON.stringify(recordings));
             console.log('Recording saved to LocalStorage.');
         };
     }
 
-    // Expose functions globally so game.js can call them
     window.startRecording = startRecording;
     window.stopRecording = stopRecording;
 });
