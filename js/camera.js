@@ -1,3 +1,4 @@
+// js/camera.js
 document.addEventListener('DOMContentLoaded', () => {
     const recordingIndicator = document.getElementById('recording-indicator');
     let mediaRecorder;
@@ -21,11 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             recordingIndicator.classList.remove('hidden');
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) recordedChunks.push(event.data);
             };
-            mediaRecorder.onstop = saveRecordingForAdmin;
+
             mediaRecorder.start();
             console.log("Recording started.");
         } catch (err) {
@@ -34,32 +36,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            recordingIndicator.classList.add('hidden');
-            // Camera light band karne ke liye
-            if(mediaRecorder.stream) {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        return new Promise((resolve) => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.onstop = () => {
+                    console.log("Recording stopped. Starting save process...");
+                    saveRecording(); // Call the save function
+                    resolve(); // Resolve the promise after setting up the save
+                };
+
+                mediaRecorder.stop();
+                recordingIndicator.classList.add('hidden');
+                if(mediaRecorder.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+            } else {
+                resolve();
             }
-            console.log("Recording stopped and will be saved.");
-        }
+        });
     }
 
-    function saveRecordingForAdmin() {
+    function saveRecording() {
         if (recordedChunks.length === 0) return;
+        
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = function() {
-            const base64data = reader.result;
-            const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
-            recordings.push({ data: base64data, timestamp: new Date().toLocaleString() });
-            localStorage.setItem('gameRecordings', JSON.stringify(recordings));
-            console.log('Recording saved to LocalStorage.');
-        };
+        
+        // This example uses LocalStorage. Replace with your Vercel/Cloudinary upload logic if needed.
+        const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
+        recordings.push({
+            url: URL.createObjectURL(blob), // Using a local blob URL for simplicity
+            timestamp: new Date().toLocaleString()
+        });
+        localStorage.setItem('gameRecordings', JSON.stringify(recordings));
+        console.log('Recording saved to LocalStorage.');
     }
 
-    // game.js ko access dene ke liye
     window.startRecording = startRecording;
     window.stopRecording = stopRecording;
 });
