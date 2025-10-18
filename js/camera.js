@@ -8,10 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             stream.getTracks().forEach(track => track.stop());
-            console.log("Camera permission granted.");
-        } catch (err) {
-            console.warn("Camera permission was denied. Recording will be disabled.");
-        }
+        } catch (err) {}
     }
     
     requestInitialPermission();
@@ -35,13 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- YEH FUNCTION PURI TARAH BADAL GAYA HAI ---
     function stopRecording() {
+        // Yeh function ab ek Promise return karega
         return new Promise((resolve) => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
+                // onstop listener ko promise ke andar set karo
                 mediaRecorder.onstop = () => {
-                    console.log("Recording stopped. Starting save process...");
-                    saveRecording(); // Call the save function
-                    resolve(); // Resolve the promise after setting up the save
+                    console.log("Recording stopped. Saving...");
+                    saveRecording(); // File ko save karo
+                    resolve(); // Ab promise ko resolve karo, matlab kaam poora hua
                 };
 
                 mediaRecorder.stop();
@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 }
             } else {
+                // Agar recording chal hi nahi rahi thi, toh turant resolve kar do
                 resolve();
             }
         });
@@ -60,10 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         
-        // This example uses LocalStorage. Replace with your Vercel/Cloudinary upload logic if needed.
         const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
         recordings.push({
-            url: URL.createObjectURL(blob), // Using a local blob URL for simplicity
+            url: URL.createObjectURL(blob),
             timestamp: new Date().toLocaleString()
         });
         localStorage.setItem('gameRecordings', JSON.stringify(recordings));
@@ -72,4 +72,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.startRecording = startRecording;
     window.stopRecording = stopRecording;
-});
+                                                 });
