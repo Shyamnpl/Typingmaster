@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@vercel/kv": "^1.0.1",
     "cloudinary": "^1.41.0"
   }
 }
