@@ -29,52 +29,64 @@
         <p id="no-recordings" style="display: none;">No recordings found.</p>
     </div>
 
+    <!-- ===== SCRIPT SECTION HAS BEEN FULLY REPLACED ===== -->
     <script>
-        // --- NEW: SECURITY CHECK SCRIPT ---
-        // Yeh script sabse pehle chalega
+        // --- Security Check Script (Yeh waisa hi rahega) ---
         (function() {
-            // Check karo ki 'isLoggedIn' session mein 'true' set hai ya nahi
             if (sessionStorage.getItem('isLoggedIn') !== 'true') {
-                // Agar login nahi hai, toh turant login page par bhej do
-                alert("You must be logged in to view this page."); // Optional: User ko message dikhao
-                window.location.href = 'index.html'; // Login page ka naam
+                alert("You must be logged in to view this page.");
+                window.location.href = 'index.html';
             }
         })();
-        // --- END OF SECURITY CHECK SCRIPT ---
 
         document.addEventListener('DOMContentLoaded', () => {
             const recordingsList = document.getElementById('recordings-list');
             const noRecordingsMsg = document.getElementById('no-recordings');
 
-            function loadRecordings() {
-                const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
-                recordingsList.innerHTML = '';
+            // NAYA FUNCTION: Server se recordings laane ke liye
+            async function loadRecordings() {
+                try {
+                    // Step 1: Hamare get API ko call karke server se data lao
+                    const response = await fetch('/api/getRecordings');
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch from server.');
+                    }
+                    const recordings = await response.json();
+                    
+                    recordingsList.innerHTML = ''; // Purani list saaf karo
 
-                if (recordings.length === 0) {
-                    noRecordingsMsg.style.display = 'block';
-                } else {
-                    recordings.forEach((rec, index) => {
-                        const item = document.createElement('div');
-                        item.className = 'recording-item';
-                        item.innerHTML = `
-                            <div class="recording-info">
-                                <span>${rec.timestamp}</span>
-                                <div class="recording-controls">
-                                    <button class="play-btn" data-index="${index}">Play</button>
-                                    <button class="delete-btn" data-index="${index}">Delete</button>
+                    if (recordings.length === 0) {
+                        noRecordingsMsg.style.display = 'block';
+                    } else {
+                        noRecordingsMsg.style.display = 'none';
+                        // Step 2: Har recording ke liye HTML banao
+                        recordings.forEach(rec => {
+                            const item = document.createElement('div');
+                            item.className = 'recording-item';
+                            // Delete button mein 'data-timestamp' ka istemal karenge
+                            item.innerHTML = `
+                                <div class="recording-info">
+                                    <span>${rec.timestamp}</span>
+                                    <div class="recording-controls">
+                                        <button class="play-btn">Play</button>
+                                        <button class="delete-btn" data-timestamp="${rec.timestamp}">Delete</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <video src="${rec.url}" controls style="display:none;"></video>
-                        `;
-                        recordingsList.appendChild(item);
-                    });
+                                <video src="${rec.url}" controls style="display:none;"></video>
+                            `;
+                            recordingsList.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load recordings:', error);
+                    noRecordingsMsg.textContent = 'Error loading recordings from server.';
+                    noRecordingsMsg.style.display = 'block';
                 }
             }
 
-            recordingsList.addEventListener('click', (e) => {
-                const index = e.target.getAttribute('data-index');
-                if (index === null) return;
-
+            // NAYA EVENT LISTENER: Ab yeh API calls karega
+            recordingsList.addEventListener('click', async (e) => {
+                // Play/Hide logic waisa hi rahega
                 if (e.target.classList.contains('play-btn')) {
                     const video = e.target.closest('.recording-item').querySelector('video');
                     const isHidden = video.style.display === 'none';
@@ -82,16 +94,26 @@
                     e.target.textContent = isHidden ? 'Hide' : 'Play';
                 }
 
+                // Delete logic ab server par request bhejega
                 if (e.target.classList.contains('delete-btn')) {
+                    const timestamp = e.target.getAttribute('data-timestamp');
                     if (confirm('Are you sure you want to delete this recording?')) {
-                        const recordings = JSON.parse(localStorage.getItem('gameRecordings'));
-                        recordings.splice(index, 1);
-                        localStorage.setItem('gameRecordings', JSON.stringify(recordings));
-                        loadRecordings();
+                        try {
+                            await fetch('/api/deleteRecording', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ timestamp: timestamp })
+                            });
+                            loadRecordings(); // Delete karne ke baad list ko refresh karo
+                        } catch (error) {
+                            console.error('Failed to delete recording:', error);
+                            alert('Error deleting recording.');
+                        }
                     }
                 }
             });
 
+            // Page load hote hi recordings load karo
             loadRecordings();
         });
     </script>
