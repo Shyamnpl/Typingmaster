@@ -1,4 +1,4 @@
-// js/camera.js
+// js/camera.js (NAYA, SAHI CODE)
 
 // --- Global variables for recording ---
 let mediaRecorder;
@@ -8,64 +8,50 @@ let stream;
 // This function will be called when the game starts
 async function startRecording() {
     try {
-        // Access the user's camera and microphone
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
-        // Create a new MediaRecorder instance
         mediaRecorder = new MediaRecorder(stream);
 
-        // Event listener for when data is available
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 recordedChunks.push(event.data);
             }
         };
 
-        // Event listener for when recording stops
         mediaRecorder.onstop = async () => {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
             
-            // --- YAHAN SE BADLAAV SHURU HOTA HAI ---
-            // Ab hum video ko server par upload karenge (maan lijiye aapke paas yeh function hai)
-            // Yeh function video upload karke public URL dega
             try {
-                // IMPORTANT: Replace this with your actual Cloudinary upload logic
+                // Step 1: Naye function se video ko Cloudinary par upload karo
+                console.log('Uploading recorded video to Cloudinary...');
+                document.getElementById('quitButton').textContent = "Uploading..."; // User ko feedback do
+                
                 const uploadedUrl = await uploadToCloudinary(blob); 
 
                 if (uploadedUrl) {
+                    // Step 2: Asli URL ko apne server/database mein save karo
                     const newRecording = {
                         url: uploadedUrl,
-                        timestamp: new Date().toLocaleString() // Unique timestamp
+                        timestamp: new Date().toLocaleString()
                     };
-
-                    // PURANA CODE (localStorage wala)
-                    /*
-                    const recordings = JSON.parse(localStorage.getItem('gameRecordings') || '[]');
-                    recordings.push(newRecording);
-                    localStorage.setItem('gameRecordings', JSON.stringify(recordings));
-                    console.log('Recording saved to localStorage.');
-                    */
-
-                    // NAYA CODE: Server API ko call karke database mein save karna
-                    console.log('Saving recording to the server...');
+                    
+                    console.log('Saving recording URL to the server...');
                     await fetch('/api/addRecording', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newRecording),
                     });
-                    console.log('Recording successfully saved to the server.');
+                    console.log('Recording successfully saved!');
                 }
             } catch (error) {
                 console.error('Failed to upload or save recording:', error);
+                alert('Sorry, there was an error uploading your recording.');
+            } finally {
+                 document.getElementById('quitButton').textContent = "Quit"; // Button ko wapas theek karo
             }
             
-            // --- YAHAN PAR BADLAAV KHATM HOTA HAI ---
-
-            // Clean up
             recordedChunks = [];
         };
 
-        // Start recording
         mediaRecorder.start();
         console.log('Recording started.');
 
@@ -78,32 +64,44 @@ async function startRecording() {
 async function stopRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
-        // Stop all media tracks to turn off the camera light
-        stream.getTracks().forEach(track => track.stop());
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
         console.log('Recording stopped.');
     }
 }
 
-// Dummy function for Cloudinary upload - Replace with your actual implementation
+// ===== YEH FUNCTION POORI TARAH SE BADAL GAYA HAI =====
 async function uploadToCloudinary(blob) {
-    console.log("Uploading to Cloudinary...");
-    // Aapka Cloudinary upload logic yahan aayega
-    // Yeh ek example URL hai. Aapko yahan se aane wala real URL istemal karna hai.
-    // For example:
-    // const formData = new FormData();
-    // formData.append('file', blob);
-    // formData.append('upload_preset', 'YOUR_PRESET');
-    // const response = await fetch('https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/video/upload', {
-    //     method: 'POST',
-    //     body: formData
-    // });
-    // const data = await response.json();
-    // return data.secure_url;
+    // APNI CLOUDINARY DETAILS YAHAN DAALEIN
+    const CLOUD_NAME = "dublbe56c"; // Yahan apna Cloudinary Cloud Name daalein
+    const UPLOAD_PRESET = "my_game_uploads"; // Yahan apna Unsigned Upload Preset ka naam daalein
 
-    // For now, returning a placeholder
-    return 'https://res.cloudinary.com/demo/video/upload/v1689266232/samples/elephants.webm';
+    const formData = new FormData();
+    formData.append('file', blob);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`;
+
+    try {
+        const response = await fetch(cloudinaryUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Cloudinary upload failed.');
+        }
+
+        const data = await response.json();
+        console.log('Upload successful, URL:', data.secure_url);
+        return data.secure_url; // Asli video ka URL yahan se milega
+    } catch (error) {
+        console.error('Error uploading to Cloudinary:', error);
+        return null; // Error hone par null return karo
+    }
 }
 
-// Make functions available globally if needed (e.g., in game.js)
+// Make functions available globally
 window.startRecording = startRecording;
 window.stopRecording = stopRecording;
