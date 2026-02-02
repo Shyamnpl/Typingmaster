@@ -36,6 +36,30 @@ jobs:
           echo "RDP_USER=SKM" >> $env:GITHUB_ENV
           echo "RDP_PASS=SK@12345" >> $env:GITHUB_ENV
 
+      - name: Fix SKM Downloads Folder (Auto & Fast)
+        shell: powershell
+        run: |
+          $publicDownloads = "C:\Users\Public\Downloads"
+          New-Item -ItemType Directory -Force -Path $publicDownloads
+
+          # Auto-detect SKM profile (SKM ya SKM.random)
+          $skmProfile = Get-ChildItem "C:\Users" | Where-Object {
+            $_.Name -like "SKM*"
+          } | Select-Object -First 1
+
+          if (-not $skmProfile) {
+            Write-Error "SKM profile not found"
+            exit 1
+          }
+
+          $skmDownloads = "$($skmProfile.FullName)\Downloads"
+
+          if (Test-Path $skmDownloads) {
+            Remove-Item $skmDownloads -Recurse -Force
+          }
+
+          cmd /c mklink /J "$skmDownloads" "$publicDownloads"
+
       - name: Install Tailscale
         run: |
           $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
@@ -48,14 +72,14 @@ jobs:
         run: |
           # --- PATH SETTINGS (Sab users ko dikhne wala path) ---
           $desktopPath = "C:\Users\Public\Desktop"
-          $publicDownloads = "C:\Users\SKM.runnervmzwdec\Downloads"
+          $publicDownloads = "C:\Users\Public\Downloads"
           
           # Force create Public Downloads if missing
           New-Item -ItemType Directory -Force -Path $publicDownloads
 
           # --- 1. CONFIGS.TXT (Desktop par) ---
           Write-Host "Creating Configs.txt on Desktop..."
-          $jsonContent = '[{"targets":[{"delayUnit":1,"delayValue":3,"duration":0,"type":0,"xPos":200,"xPos1":-1,"yPos":332,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1229,"xPos1":-1,"yPos":655,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1016,"xPos1":-1,"yPos":660,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1054,"xPos1":-1,"yPos":499,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":881,"xPos1":-1,"yPos":230,"yPos1":-1}],"antiDetection":false,"id":0,"name":"Configsksksbhai","numberOfCycles":10,"stopConditionChecked":0,"timeValue":300}]'
+          $jsonContent = '[{"targets":[{"delayUnit":1,"delayValue":3,"duration":0,"type":0,"xPos":200,"xPos1":-1,"yPos":332,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1019,"xPos1":-1,"yPos":662,"yPos1":-1},{"delayUnit":1,"delayValue":2,"duration":0,"type":0,"xPos":1063,"xPos1":-1,"yPos":497,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1190,"xPos1":-1,"yPos":493,"yPos1":-1}],"antiDetection":false,"id":0,"name":"finalbest6hourlastcon","numberOfCycles":10,"stopConditionChecked":0,"timeValue":300}]'
           Set-Content -Path "$desktopPath\configs.txt" -Value $jsonContent
 
           # --- FAST DOWNLOADER SETUP ---
