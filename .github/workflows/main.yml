@@ -36,30 +36,6 @@ jobs:
           echo "RDP_USER=SKM" >> $env:GITHUB_ENV
           echo "RDP_PASS=SK@12345" >> $env:GITHUB_ENV
 
-      - name: Fix SKM Downloads Folder (Auto & Fast)
-        shell: powershell
-        run: |
-          $publicDownloads = "C:\Users\Public\Downloads"
-          New-Item -ItemType Directory -Force -Path $publicDownloads
-
-          # Auto-detect SKM profile (SKM ya SKM.random)
-          $skmProfile = Get-ChildItem "C:\Users" | Where-Object {
-            $_.Name -like "SKM*"
-          } | Select-Object -First 1
-
-          if (-not $skmProfile) {
-            Write-Error "SKM profile not found"
-            exit 1
-          }
-
-          $skmDownloads = "$($skmProfile.FullName)\Downloads"
-
-          if (Test-Path $skmDownloads) {
-            Remove-Item $skmDownloads -Recurse -Force
-          }
-
-          cmd /c mklink /J "$skmDownloads" "$publicDownloads"
-
       - name: Install Tailscale
         run: |
           $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
@@ -72,7 +48,7 @@ jobs:
         run: |
           # --- PATH SETTINGS (Sab users ko dikhne wala path) ---
           $desktopPath = "C:\Users\Public\Desktop"
-          $publicDownloads = "C:\Users\Public\Downloads"
+          $publicDownloads = "C:\Users\Public\Desktop"
           
           # Force create Public Downloads if missing
           New-Item -ItemType Directory -Force -Path $publicDownloads
