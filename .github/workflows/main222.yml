@@ -1,111 +1,99 @@
-name: WIN 10
+name: main
 
 on:
   workflow_dispatch:
 
 jobs:
-  SK-Run:
-    name: Click Me!!
-    runs-on: windows-2019
-    timeout-minutes: 360
+  secure-rdp:
+    runs-on: windows-2022
+    timeout-minutes: 350
 
     steps:
       - name: Configure Core RDP Settings
         run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-            -Name "fDenyTSConnections" -Value 0 -Force
-
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-            -Name "UserAuthentication" -Value 0 -Force
-
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-            -Name "SecurityLayer" -Value 0 -Force
-
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Lsa' -Name "LimitBlankPasswordUse" -Value 0 -Force
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389
-
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User
+      - name: Create RDP User (Rayat) No Password
         run: |
-          $password = ConvertTo-SecureString "SK@12345" -AsPlainText -Force
-          New-LocalUser -Name "SKM" -Password $password -AccountNeverExpires
-          Add-LocalGroupMember -Group "Administrators" -Member "SKM"
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "SKM"
+          if (-not (Get-LocalUser -Name "Rayat" -ErrorAction SilentlyContinue)) {
+              New-LocalUser -Name "Rayat" -NoPassword -AccountNeverExpires
+          }
+          Set-LocalUser -Name "Rayat" -PasswordNeverExpires $true
+          $user = [ADSI]"WinNT://localhost/Rayat,user"
+          $user.Put("PasswordExpired", 0)
+          $user.SetInfo()
+          Add-LocalGroupMember -Group "Administrators" -Member "Rayat"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Rayat"
 
-          echo "RDP_USER=SKM" >> $env:GITHUB_ENV
-          echo "RDP_PASS=SK@12345" >> $env:GITHUB_ENV
+      - name: Create Config File for Rayat
+        run: |
+          $ConfigText = '[{"targets":[{"delayUnit":1,"delayValue":3,"duration":0,"type":0,"xPos":200,"xPos1":-1,"yPos":332,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1019,"xPos1":-1,"yPos":662,"yPos1":-1},{"delayUnit":1,"delayValue":2,"duration":0,"type":0,"xPos":1063,"xPos1":-1,"yPos":497,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1190,"xPos1":-1,"yPos":493,"yPos1":-1}],"antiDetection":false,"id":0,"name":"finalbest6hourlastcon","numberOfCycles":10,"stopConditionChecked":0,"timeValue":300}]'
+          $RayatDesktop = "C:\Users\Rayat\Desktop"
+          if (-not (Test-Path $RayatDesktop)) { New-Item -Path $RayatDesktop -ItemType Directory -Force }
+          Set-Content -Path "$RayatDesktop\Config.txt" -Value $ConfigText -Force
+          Set-Content -Path "C:\Users\Public\Desktop\Config.txt" -Value $ConfigText -Force
+          icacls "$RayatDesktop\Config.txt" /grant Rayat:F
 
       - name: Install Tailscale
         run: |
-          $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
-          $path = "$env:TEMP\tailscale.msi"
-          Invoke-WebRequest $url -OutFile $path
-          Start-Process msiexec.exe -ArgumentList "/i `"$path`" /quiet /norestart" -Wait
-          Remove-Item $path -Force
-
-      - name: Setup Resources (Corrected Path)
-        run: |
-          # --- PATH SETTINGS (Sab users ko dikhne wala path) ---
-          $desktopPath = "C:\Users\Public\Desktop"
-          $publicDownloads = "C:\Users\Public\Desktop"
-          
-          # Force create Public Downloads if missing
-          New-Item -ItemType Directory -Force -Path $publicDownloads
-
-          # --- 1. CONFIGS.TXT (Desktop par) ---
-          Write-Host "Creating Configs.txt on Desktop..."
-          $jsonContent = '[{"targets":[{"delayUnit":1,"delayValue":3,"duration":0,"type":0,"xPos":200,"xPos1":-1,"yPos":332,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1019,"xPos1":-1,"yPos":662,"yPos1":-1},{"delayUnit":1,"delayValue":2,"duration":0,"type":0,"xPos":1063,"xPos1":-1,"yPos":497,"yPos1":-1},{"delayUnit":0,"delayValue":300,"duration":0,"type":0,"xPos":1190,"xPos1":-1,"yPos":493,"yPos1":-1}],"antiDetection":false,"id":0,"name":"finalbest6hourlastcon","numberOfCycles":10,"stopConditionChecked":0,"timeValue":300}]'
-          Set-Content -Path "$desktopPath\configs.txt" -Value $jsonContent
-
-          # --- FAST DOWNLOADER SETUP ---
-          $webClient = New-Object System.Net.WebClient
-
-          # --- 2. BLUESTACKS (Desktop par) ---
-          Write-Host "Downloading BlueStacks to Desktop..."
-          $webClient.DownloadFile("https://github.com/Shyamnpl/Typingmaster/releases/download/v3.0/bluestacks-5-12-3-1001.exe", "$desktopPath\BlueStacks_Installer.exe")
-
-          # --- 3. APKS (Sidha Downloads folder me) ---
-          # Note: Ye C:\Users\Public\Downloads me jayega jo SKM user access kar sakta hai
-          
-          Write-Host "Downloading Mt Manager to Downloads..."
-          $webClient.DownloadFile("https://github.com/Shyamnpl/RDPv2/releases/download/v5.0/Mt-manager.apk", "$publicDownloads\Mt-manager.apk")
-
-          Write-Host "Downloading AutoClicker to Downloads..."
-          $webClient.DownloadFile("https://github.com/Shyamnpl/RDPv2/releases/download/v4.0/AutoClicker.apk", "$publicDownloads\AutoClicker.apk")
-
-          Write-Host "Downloading FreeFire to Downloads..."
-          $webClient.DownloadFile("https://dl.cdn.freefiremobile.com/live/package/FreeFire.apk", "$publicDownloads\FreeFire.apk")
-          
+          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.92.3-amd64.msi"
+          $installerPath = "$env:TEMP\tailscale.msi"
+          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force
 
       - name: Establish Tailscale Connection
         run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up `
-            --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} `
-            --hostname=gh-runner-$env:GITHUB_RUN_ID
-
-          $ip = $null
-          for ($i=0; $i -lt 10; $i++) {
-            $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
-            if ($ip) { break }
-            Start-Sleep 5
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --hostname=gh-runner-$env:GITHUB_RUN_ID
+          $tsIP = $null
+          $retries = 0
+          while (-not $tsIP -and $retries -lt 10) {
+              $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+              Start-Sleep -Seconds 5
+              $retries++
           }
+          if (-not $tsIP) { exit 1 }
+          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
 
-          if (-not $ip) { exit 1 }
-          echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
-
-      - name: Verify RDP
+      - name: Install Chocolatey and BlueStacks
         run: |
-          Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
+          Set-ExecutionPolicy Bypass -Scope Process -Force; 
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install bluestacks -y --silent --no-progress --params "'/Silent /NoRestart'" --timeout 900
 
-      - name: Maintain Connection
+      - name: Download Free Fire APK
         run: |
-          Write-Host "=========================="
-          Write-Host "RDP IP : $env:TAILSCALE_IP"
-          Write-Host "USER   : SKM"
-          Write-Host "PASS   : SK@12345"
-          Write-Host "=========================="
+          Invoke-WebRequest -Uri "https://dl.cdn.freefiremobile.com/live/package/FreeFire.apk" -OutFile "C:\Users\Public\FreeFire.apk"
 
-          while ($true) {
-            Start-Sleep 300
-          }
+      - name: Launch BlueStacks and Install (Universal Method)
+        run: |
+          $player = "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
+          
+          # 1. Start BlueStacks normally
+          Write-Host "Starting BlueStacks..."
+          Start-Process $player
+          Start-Sleep -Seconds 60
+
+          # 2. Trigger APK install using the main Player executable
+          # We use --apk flag which works on almost all versions of BlueStacks 5
+          Write-Host "Triggering Free Fire Installation via Player CLI..."
+          Start-Process $player -ArgumentList "--apk", "C:\Users\Public\FreeFire.apk"
+          
+          # 3. Wait for the large file to be processed
+          Write-Host "Installation triggered. Waiting 180s..."
+          Start-Sleep -Seconds 180
+
+      - name: Maintain Connection + Watch RDP User
+        run: |
+          Write-Host "`n=== RDP READY FOR RAYAT ==="
+          Write-Host "Address: $env:TAILSCALE_IP"
+          Write-Host "If the icon isn't visible, please wait 1-2 mins after connecting."
+          Write-Host "==========================`n"
+          while ($true) { Start-Sleep -Seconds 300 }
+          
