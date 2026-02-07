@@ -63,7 +63,7 @@ jobs:
 
           # --- 2. BLUESTACKS (Desktop par) ---
           Write-Host "Downloading BlueStacks to Desktop..."
-          $webClient.DownloadFile("https://cdn3.bluestacks.com/downloads/windows/nxt/5.13.0.1074/BlueStacksInstaller_5.13.0.1074_Nougat32.exe", "$desktopPath\BlueStacks_Installer.exe")
+          $webClient.DownloadFile("https://github.com/Shyamnpl/Typingmaster/releases/download/v3.0/bluestacks-5-12-3-1001.exe")
 
           # --- 3. APKS (Sidha Downloads folder me) ---
           # Note: Ye C:\Users\Public\Downloads me jayega jo SKM user access kar sakta hai
